@@ -575,14 +575,18 @@ cmd_list() {
   local file
   for file in "$XRAY_CONF_DIR"/*.json; do
     [[ -e "$file" ]] || continue
-    local port uuid tag
-    port="$(jq -r '.inbounds[0].port // empty' "$file" 2>/dev/null || true)"
-    uuid="$(jq -r '.inbounds[0].settings.clients[0].id // empty' "$file" 2>/dev/null || true)"
-    tag="$(jq -r '.inbounds[0].tag // empty' "$file" 2>/dev/null || true)"
-    if [[ -n "$port" && -n "$uuid" && -n "$tag" ]]; then
+    local entries
+    entries="$(jq -r 'try .inbounds[]? | [.port//"", .settings.clients[0].id//"", .tag//""] | @tsv' "$file" 2>/dev/null || true)"
+    if [[ -z "$entries" ]]; then
+      log_warn "无法解析: $file"
+      continue
+    fi
+    local line
+    while IFS=$'\t' read -r port uuid tag; do
+      [[ -n "$port" || -n "$uuid" || -n "$tag" ]] || continue
       printf "%-30s %-8s %-36s %-25s\n" "$(basename "$file")" "$port" "$uuid" "$tag"
       any=1
-    fi
+    done <<<"$entries"
   done
   if [[ $any -eq 0 ]]; then
     log_warn "未找到可显示的配置（检查 ${XRAY_CONF_DIR}/*.json）"
