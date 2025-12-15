@@ -651,10 +651,99 @@ cmd_uninstall() {
   fi
 }
 
+prompt_default() {
+  local prompt="$1" default="$2" var
+  read -r -p "$prompt [${default}]: " var
+  if [[ -z "$var" ]]; then
+    echo "$default"
+  else
+    echo "$var"
+  fi
+}
+
+interactive_menu() {
+  print_banner
+  cat <<'EOF'
+请选择操作:
+ 1) 安装/更新并启动 (install --start)
+ 2) 新增 Reality+Vision
+ 3) 新增 enc+Vision (需证书路径)
+ 4) 新增 Reality+XHTTP
+ 5) 一键部署 Reality+Vision (含 BBR/禁BT/禁回国)
+ 6) 查看配置 (list)
+ 7) 删除配置 (remove)
+ 8) 卸载 (uninstall)
+ 0) 退出
+EOF
+  read -r -p "输入编号: " choice
+  case "$choice" in
+    1)
+      cmd_install --start
+      ;;
+    2)
+      local port sni dest tag
+      port="$(prompt_default "端口 (留空自动)" "")"
+      sni="$(prompt_default "SNI" "www.cloudflare.com")"
+      dest="$(prompt_default "回源目标" "${sni}:443")"
+      tag="$(prompt_default "标识 tag" "reality-vision-${port:-auto}")"
+      cmd_add --type=reality-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag"
+      ;;
+    3)
+      local port sni cert key alpn tag
+      port="$(prompt_default "端口" "443")"
+      sni="$(prompt_default "SNI" "www.example.com")"
+      cert="$(prompt_default "证书路径" "/etc/ssl/certs/fullchain.pem")"
+      key="$(prompt_default "私钥路径" "/etc/ssl/private/key.pem")"
+      alpn="$(prompt_default "ALPN" "\"h2\",\"http/1.1\"")"
+      tag="$(prompt_default "标识 tag" "enc-vision-${port}")"
+      cmd_add --type=enc-vision --port="$port" --sni="$sni" --cert="$cert" --key="$key" --alpn="$alpn" --tag="$tag"
+      ;;
+    4)
+      local port sni dest path tag
+      port="$(prompt_default "端口 (留空自动)" "")"
+      sni="$(prompt_default "SNI" "www.cloudflare.com")"
+      dest="$(prompt_default "回源目标" "${sni}:443")"
+      path="$(prompt_default "XHTTP path" "/")"
+      tag="$(prompt_default "标识 tag" "reality-xhttp-${port:-auto}")"
+      cmd_add --type=reality-xhttp ${port:+--port="$port"} --sni="$sni" --dest="$dest" --path="$path" --tag="$tag"
+      ;;
+    5)
+      cmd_deploy --start --bbr --block-bt --block-cn --type=reality-vision
+      ;;
+    6)
+      cmd_list
+      ;;
+    7)
+      local tag
+      tag="$(prompt_default "要删除的 tag" "")"
+      if [[ -z "$tag" ]]; then
+        log_warn "未输入 tag，已取消"
+      else
+        cmd_remove --tag="$tag"
+      fi
+      ;;
+    8)
+      local purge
+      purge="$(prompt_default "是否 purge 配置目录? (y/N)" "N")"
+      if [[ "$purge" =~ ^[Yy]$ ]]; then
+        cmd_uninstall --purge
+      else
+        cmd_uninstall
+      fi
+      ;;
+    0)
+      exit 0
+      ;;
+    *)
+      echo "无效选项"
+      ;;
+  esac
+}
+
 main() {
   if [[ $# -lt 1 ]]; then
-    usage
-    exit 1
+    interactive_menu
+    exit 0
   fi
 
   case "$1" in

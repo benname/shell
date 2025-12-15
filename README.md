@@ -43,6 +43,21 @@ sudo ./xray.sh remove --tag=reality-vision-443
 - `uninstall [--purge]`：卸载二进制/服务，`--purge` 额外清理配置目录和 geo 数据。
 - `help`：帮助。
 
+## 交互式菜单
+
+直接运行 `xray`（或 `./xray.sh` 无参数）进入菜单，无需记参数：
+```
+1) 安装/更新并启动
+2) 新增 Reality+Vision
+3) 新增 enc+Vision
+4) 新增 Reality+XHTTP
+5) 一键部署 Reality+Vision (BBR+禁BT+禁回国)
+6) 查看配置
+7) 删除配置
+8) 卸载
+0) 退出
+```
+
 ## 自测
 
 ```bash
