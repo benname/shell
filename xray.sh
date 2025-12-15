@@ -663,11 +663,11 @@ interactive_menu() {
   print_banner
   cat <<'EOF'
 请选择操作:
- 1) 安装/更新并启动 (install --start)
- 2) 新增 Reality+Vision
- 3) 新增 enc+Vision (需证书路径)
- 4) 新增 Reality+XHTTP
- 5) 一键部署 Reality+Vision (含 BBR/禁BT/禁回国)
+ 1) 安装/更新并启动
+ 2) 新增 VLESS + Reality + Vision
+ 3) 新增 VLESS + ENC + Vision（Reality，无需证书）
+ 4) 新增 VLESS + Reality + XHTTP
+ 5) 一键部署 VLESS + Reality + Vision (BBR+禁BT+禁回国)
  6) 查看配置 (list)
  7) 删除配置 (remove)
  8) 卸载 (uninstall)
