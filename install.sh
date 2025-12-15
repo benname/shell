@@ -26,7 +26,11 @@ main() {
   tar -xzf "$tmp/xray.tar.gz" -C "$tmp"
 
   local src_dir
-  src_dir="$(find "$tmp" -maxdepth 1 -type d -name "*xray*" ! -path "$tmp" | head -n1)"
+  # 优先匹配 xray 前缀，否则取第一个目录
+  src_dir="$(find "$tmp" -mindepth 1 -maxdepth 1 -type d -name "*xray*" ! -path "$tmp" | head -n1)"
+  if [[ -z "$src_dir" ]]; then
+    src_dir="$(find "$tmp" -mindepth 1 -maxdepth 1 -type d ! -path "$tmp" | head -n1)"
+  fi
   if [[ -z "$src_dir" ]]; then
     echo "[ERROR] 未找到解压目录" >&2
     exit 1
