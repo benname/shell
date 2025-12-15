@@ -2,9 +2,9 @@
   "inbounds": [
     {
       "listen": "::",
-      "port": ${PORT:-443},
+      "port": ${PORT},
       "protocol": "vless",
-      "tag": "${TAG:-vless-reality-vision}",
+      "tag": "${TAG}",
       "settings": {
         "clients": [
           {
@@ -20,14 +20,14 @@
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "dest": "${DEST:-www.cloudflare.com:443}",
+          "dest": "${DEST}",
           "xver": 0,
           "serverNames": [
-            "${SERVER_NAME:-www.cloudflare.com}"
+            "${SERVER_NAME}"
           ],
           "privateKey": "${REALITY_PRIVATE_KEY}",
           "shortIds": [
-            "${REALITY_SHORT_ID:-0123456789abcdef}"
+            "${REALITY_SHORT_ID}"
           ],
           "spiderX": "/"
         }
