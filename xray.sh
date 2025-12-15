@@ -544,6 +544,8 @@ cmd_add() {
   fi
 
   log_info "生成配置: 类型=$type, 端口=$port, tag=$tag"
+  # 渲染模板前导出占位符环境
+  export PORT UUID SERVER_NAME DEST REALITY_PRIVATE_KEY REALITY_SHORT_ID TAG ENC_DECRYPTION ENC_ENCRYPTION HTTP_PATH
   render_template "$tpl" "$outfile"
   if [[ ! -f "$outfile" ]]; then
     fatal "写入配置失败: $outfile"
