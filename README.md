@@ -4,10 +4,17 @@
 
 ## 快速开始
 
+公开仓库一键安装（示例: main 分支 tarball，安装核心+服务+管理命令 xray）：
 ```bash
-chmod +x xray.sh lib/*.sh
-sudo ./xray.sh install --start      # 安装/更新 Xray，并启动 systemd 服务
-./xray.sh doctor                    # 查看环境与默认目录
+bash <(curl -fsSL https://raw.githubusercontent.com/benname/shell/main/install.sh)
+```
+
+手动/离线方式：
+```bash
+git clone <your repo> xray && cd xray
+chmod +x xray.sh lib/*.sh scripts/selftest.sh install.sh
+sudo ./xray.sh install --start      # 安装核心(xray-core)+systemd+管理命令 xray
+xray doctor                         # 查看环境与默认目录
 
 # 生成节点并输出分享链接
 sudo ./xray.sh add --type=reality-vision --port=443 --sni=www.cloudflare.com
@@ -53,7 +60,7 @@ sudo ./xray.sh link --name=xray   # 默认已在 install 时创建
 
 可通过环境变量或 `config/user.conf` 覆盖默认值：
 
-- `XRAY_BIN=/usr/local/bin/xray`
+- `XRAY_BIN=/usr/local/bin/xray-core`
 - `XRAY_CONF_DIR=/usr/local/etc/xray`
 - `XRAY_SERVICE_NAME=xray`
 - `XRAY_RUN_ARGS="-confdir /usr/local/etc/xray"`
@@ -78,8 +85,11 @@ XRAY_RUN_ARGS="-confdir /etc/xray"
 2. 使用 `add` 生成节点，链接输出后即可在客户端导入。
 3. 通过 `list`/`remove` 管理 confdir 内的配置。
 
-## TODO / 计划
+## 已完成功能
 
-- 一键部署命令：安装+默认节点+BBR 可选开关。
-- 规则开关：禁 BT / 禁回国 IP / WARP 代理入口。
-- 更丰富的参数校验、回滚和链接输出样式。
+- 一键安装/更新 Xray 核心（xray-core）、systemd 服务，管理命令软链为 `xray`
+- 协议生成：VLESS Reality+Vision、enc+Vision、Reality+XHTTP（分享链接输出）
+- 一键部署：install + add，支持 BBR、禁 BT、禁回国 IP
+- 规则管理：生成 `05-rules.json`（BT/geoip:cn），保留 direct/blackhole 出站
+- 卸载：删除服务/二进制/geo 数据，可选 purge 配置
+- 自测脚本：语法检查、doctor、模板渲染
