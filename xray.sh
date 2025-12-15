@@ -3,7 +3,18 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+resolve_base() {
+  local src="${BASH_SOURCE[0]}"
+  while [ -h "$src" ]; do
+    local dir
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ $src != /* ]] && src="$dir/$src"
+  done
+  cd -P "$(dirname "$src")" && pwd
+}
+
+BASE_DIR="$(resolve_base)"
 LIB_DIR="$BASE_DIR/lib"
 TEMPLATE_DIR="${TEMPLATE_DIR:-$BASE_DIR/templates}"
 USER_CONFIG="$BASE_DIR/config/user.conf"
