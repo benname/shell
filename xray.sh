@@ -577,10 +577,18 @@ cmd_list() {
   local file
   for file in "$XRAY_CONF_DIR"/*.json; do
     [[ -e "$file" ]] || continue
-    local entries
+    local has_inbounds entries
+    has_inbounds="$(jq -r 'try (.inbounds|length) // 0' "$file" 2>/dev/null || echo 0)"
     entries="$(jq -r 'try .inbounds[]? | [.port//"", .settings.clients[0].id//"", .tag//""] | @tsv' "$file" 2>/dev/null || true)"
     if [[ -z "$entries" ]]; then
+      # 若无 inbound 则静默跳过
+      if [[ "${has_inbounds:-0}" -eq 0 ]]; then
+        continue
+      fi
       log_warn "无法解析: $file"
+      continue
+    fi
+    if [[ -z "$entries" ]]; then
       continue
     fi
     local line
