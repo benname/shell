@@ -17,9 +17,9 @@ sudo ./xray.sh install --start      # 安装核心(xray-core)+systemd+管理命�
 xray doctor                         # 查看环境与默认目录
 
 # 生成节点并输出分享链接
-sudo ./xray.sh add --type=reality-vision --port=443 --sni=www.cloudflare.com
-sudo ./xray.sh add --type=enc-vision --port=8443 --cert=/path/cert.pem --key=/path/key.pem
-sudo ./xray.sh add --type=reality-xhttp --path=/ --sni=www.cloudflare.com
+xray add --type=reality-vision --port=443 --sni=www.cloudflare.com
+xray add --type=enc-vision --port=8443 --sni=www.cloudflare.com
+xray add --type=reality-xhttp --path=/ --sni=www.cloudflare.com
 
 # 查看/删除
 ./xray.sh list
@@ -32,8 +32,7 @@ sudo ./xray.sh remove --tag=reality-vision-443
 - `doctor`：打印脚本版本、路径、系统信息和依赖状态。
 - `add [--type=reality-vision|enc-vision|reality-xhttp] [...]`：生成配置文件并打印 VLESS 分享链接。
   - 通用参数：`--port`、`--uuid`、`--tag`、`--host`（链接显示用）、`--file`（输出路径）。
-  - Reality: `--sni`、`--dest`、`--short-id`、`--private-key/--public-key`（缺省自动生成）。
-  - enc+Vision: `--cert`、`--key`、`--alpn="\"h2\",\"http/1.1\""`。
+  - Reality/enc+Vision: `--sni`、`--dest`、`--short-id`、`--private-key/--public-key`（缺省自动生成），无需证书。
   - Reality+XHTTP: `--path`（默认 `/`）。
 - `deploy [opts]`：一键安装+创建节点，可选 `--bbr`（启用 BBR）、`--block-bt`、`--block-cn`、`--start`、`--version=...` 以及所有 `add` 通用参数。
 - `list`：扫描 `XRAY_CONF_DIR/*.json`，显示端口/UUID/tag。
@@ -45,13 +44,13 @@ sudo ./xray.sh remove --tag=reality-vision-443
 
 ## 交互式菜单
 
-直接运行 `xray`（或 `./xray.sh` 无参数）进入菜单，无需记参数：
+直接运行 `xray`（或 `./xray.sh` 无参数）进入菜单，无需记参数，选项会显示协议名：
 ```
 1) 安装/更新并启动
-2) 新增 Reality+Vision
-3) 新增 enc+Vision
-4) 新增 Reality+XHTTP
-5) 一键部署 Reality+Vision (BBR+禁BT+禁回国)
+2) 新增 VLESS + Reality + Vision
+3) 新增 VLESS + ENC + Vision（Reality，无需证书）
+4) 新增 VLESS + Reality + XHTTP
+5) 一键部署 VLESS + Reality + Vision (BBR+禁BT+禁回国)
 6) 查看配置
 7) 删除配置
 8) 卸载

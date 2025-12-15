@@ -55,20 +55,20 @@ usage() {
 用法: $0 <命令> [参数]
 
 命令:
-  install [--version=vX.X.X] [--start]        安装/更新 xray 二进制与服务
-  doctor                                     环境检测
+  install [--version=vX.X.X] [--start]  安装/更新 xray-core 与服务
+  doctor                                环境检测
   add [--type=reality-vision|enc-vision|reality-xhttp] [...]  添加配置，输出分享链接
-  list                                       查看配置（解析 confdir）
-  remove --tag=<tag>|--file=<path>           删除配置
-  render <tpl> <out>                         渲染模板文件
-  deploy [opts]                              一键安装+创建节点，可选 BBR/规则
-  link [--name=xray-manage]                  安装管理命令软链到 /usr/local/bin
-  uninstall [--purge]                        卸载二进制/服务，可选清理配置
-  help                                       显示帮助
+  list                                  查看配置（解析 confdir）
+  remove --tag=<tag>|--file=<path>      删除配置
+  render <tpl> <out>                    渲染模板文件
+  deploy [opts]                         一键安装+创建节点，可选 BBR/规则
+  link [--name=xray]                    安装管理命令软链到 /usr/local/bin
+  uninstall [--purge]                   卸载二进制/服务，可选清理配置
+  help                                  显示帮助
 
 add 参数示例:
   --type=reality-vision (默认)
-  --type=enc-vision  --cert=cert.pem --key=key.pem [--alpn="\"h2\",\"http/1.1\""]
+  --type=enc-vision                           Reality+Vision（enc 变体，无需证书）
   --type=reality-xhttp [--path=/]             XHTTP 回落路径
   通用: --port=443 --uuid=<uuid> --tag=my-reality --host=example.com --file=/path/to/conf.json
   reality: --sni=www.cloudflare.com --dest=www.cloudflare.com:443 --short-id=01234567 --private-key=... --public-key=...
@@ -369,9 +369,6 @@ cmd_add() {
   local pub_key=""
   local outfile=""
   local host=""
-  local cert_file=""
-  local key_file=""
-  local alpn=""
   local http_path=""
 
   while [[ $# -gt 0 ]]; do
@@ -387,9 +384,6 @@ cmd_add() {
       --public-key=*) pub_key="${1#*=}" ;;
       --file=*) outfile="${1#*=}" ;;
       --host=*) host="${1#*=}" ;;
-      --cert=*) cert_file="${1#*=}" ;;
-      --key=*) key_file="${1#*=}" ;;
-      --alpn=*) alpn="${1#*=}" ;;
       --path=*) http_path="${1#*=}" ;;
       *)
         fatal "未知参数: $1"
@@ -436,13 +430,18 @@ cmd_add() {
       export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
       ;;
     enc-vision)
-      [[ -n "$sni" ]] || sni="www.example.com"
+      [[ -n "$sni" ]] || sni="www.cloudflare.com"
+      [[ -n "$dest" ]] || dest="www.cloudflare.com:443"
+      [[ -n "$short_id" ]] || short_id="$(gen_short_id 8)"
       [[ -n "$host" ]] || host="$sni"
-      [[ -n "$alpn" ]] || alpn="\"h2\",\"http/1.1\""
-      [[ -n "$cert_file" ]] || fatal "enc-vision 需要提供 --cert=<cert.pem> 与 --key=<key.pem>"
-      [[ -n "$key_file" ]] || fatal "enc-vision 需要提供 --cert=<cert.pem> 与 --key=<key.pem>"
+      if [[ -z "$priv_key" || -z "$pub_key" ]]; then
+        local kp
+        kp="$(gen_x25519_keypair)"
+        priv_key="$(echo "$kp" | awk '/Private key/ {print $3}')"
+        pub_key="$(echo "$kp" | awk '/Public key/ {print $3}')"
+      fi
       tpl="${TEMPLATE_DIR}/vless-enc-vision.json.tpl"
-      export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" ALPN="$alpn" TLS_CERT_FILE="$cert_file" TLS_KEY_FILE="$key_file" TAG="$tag"
+      export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
       ;;
     reality-xhttp)
       [[ -n "$sni" ]] || sni="www.cloudflare.com"
@@ -475,8 +474,7 @@ cmd_add() {
       build_vless_reality_vision_link "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$tag"
       ;;
     enc-vision)
-      printf "vless://%s@%s:%s?encryption=none&flow=xtls-rprx-vision&security=tls&sni=%s&alpn=%s&type=tcp&headerType=none#%s\n" \
-        "$uuid" "$host" "$port" "$sni" "$(echo "$alpn" | tr -d '\"')" "$tag"
+      build_vless_reality_vision_link "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$tag"
       ;;
     reality-xhttp)
       printf "vless://%s@%s:%s?encryption=none&security=reality&sni=%s&fp=chrome&pbk=%s&sid=%s&type=tcp&headerType=http&path=%s#%s\n" \
