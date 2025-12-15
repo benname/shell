@@ -332,7 +332,13 @@ cmd_render() {
 }
 
 sanitize_tag() {
-  echo "$1" | tr ' /:' '-'
+  echo "$1" | tr -cd 'A-Za-z0-9._-'
+}
+
+sanitize_port() {
+  local p="$1"
+  p="${p//[!0-9]/}"
+  echo "$p"
 }
 
 find_conf_by_tag() {
@@ -466,6 +472,7 @@ cmd_add() {
   ensure_dirs
   ensure_minimal_config
 
+  port="$(sanitize_port "${port:-}")"
   [[ -n "$uuid" ]] || uuid="$(gen_uuid)"
   [[ -n "$port" ]] || port="$(rand_port)"
   [[ -n "$tag" ]] || tag="${type}-${port}"
@@ -538,6 +545,9 @@ cmd_add() {
 
   log_info "生成配置: 类型=$type, 端口=$port, tag=$tag"
   render_template "$tpl" "$outfile"
+  if [[ ! -f "$outfile" ]]; then
+    fatal "写入配置失败: $outfile"
+  fi
 
   log_info "写入配置文件: $outfile"
   log_info "分享链接:"
