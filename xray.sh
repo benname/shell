@@ -426,6 +426,7 @@ cmd_add() {
         priv_key="$(echo "$kp" | awk '/Private key/ {print $3}')"
         pub_key="$(echo "$kp" | awk '/Public key/ {print $3}')"
       fi
+      [[ -n "$pub_key" ]] || fatal "生成 Reality 公钥失败"
       tpl="${TEMPLATE_DIR}/vless-reality-vision.json.tpl"
       export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
       ;;
@@ -440,6 +441,7 @@ cmd_add() {
         priv_key="$(echo "$kp" | awk '/Private key/ {print $3}')"
         pub_key="$(echo "$kp" | awk '/Public key/ {print $3}')"
       fi
+      [[ -n "$pub_key" ]] || fatal "生成 Reality 公钥失败"
       tpl="${TEMPLATE_DIR}/vless-enc-vision.json.tpl"
       export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
       ;;
@@ -486,7 +488,10 @@ cmd_add() {
 cmd_list() {
   load_user_config
   ensure_cmd "jq"
-  printf "%-25s %-8s %-36s %-20s\n" "FILE" "PORT" "UUID" "TAG"
+  shopt -s nullglob
+  local any=0
+  printf "目录: %s\n" "$XRAY_CONF_DIR"
+  printf "%-30s %-8s %-36s %-25s\n" "FILE" "PORT" "UUID" "TAG"
   local file
   for file in "$XRAY_CONF_DIR"/*.json; do
     [[ -e "$file" ]] || continue
@@ -495,9 +500,13 @@ cmd_list() {
     uuid="$(jq -r '.inbounds[0].settings.clients[0].id // empty' "$file" 2>/dev/null || true)"
     tag="$(jq -r '.inbounds[0].tag // empty' "$file" 2>/dev/null || true)"
     if [[ -n "$port" && -n "$uuid" && -n "$tag" ]]; then
-      printf "%-25s %-8s %-36s %-20s\n" "$(basename "$file")" "$port" "$uuid" "$tag"
+      printf "%-30s %-8s %-36s %-25s\n" "$(basename "$file")" "$port" "$uuid" "$tag"
+      any=1
     fi
   done
+  if [[ $any -eq 0 ]]; then
+    log_warn "未找到可显示的配置（检查 ${XRAY_CONF_DIR}/*.json）"
+  fi
 }
 
 cmd_remove() {

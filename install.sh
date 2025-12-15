@@ -46,7 +46,7 @@ main() {
   echo "[INFO] 运行安装并启动服务"
   run_as_root "$INSTALL_DIR/xray.sh" install --start
 
-  echo "[INFO] 安装完成，可直接使用: xray doctor / xray add ..."
+  echo "[INFO] 安装完成，直接输入 xray 进入菜单"
 }
 
 main "$@"
