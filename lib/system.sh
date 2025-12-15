@@ -136,14 +136,32 @@ gen_short_id() {
 }
 
 gen_x25519_keypair() {
-  local bin="${XRAY_BIN:-xray}"
-  if [[ -x "$bin" ]]; then
-    "$bin" x25519
-    return
+  local bin="${XRAY_BIN:-}"
+  local runner=""
+  local candidates=(
+    "$bin"
+    "/usr/local/bin/xray-core"
+    "/usr/local/bin/xray"
+    "$(command -v xray-core 2>/dev/null || true)"
+    "$(command -v xray 2>/dev/null || true)"
+  )
+  for cand in "${candidates[@]}"; do
+    [[ -n "$cand" ]] || continue
+    [[ -x "$cand" ]] || continue
+    if "$cand" -version >/dev/null 2>&1; then
+      runner="$cand"
+      break
+    fi
+  done
+  if [[ -z "$runner" ]]; then
+    fatal "未检测到 xray-core，可先运行 install"
   fi
-  if command -v xray >/dev/null 2>&1; then
-    xray x25519
-  else
-    fatal "未检测到 xray，可先运行 install"
+  local out
+  if ! out="$("$runner" x25519 2>/dev/null)"; then
+    fatal "运行 $runner x25519 失败，请确认核心可执行"
   fi
+  if [[ -z "$out" ]]; then
+    fatal "$runner x25519 未输出内容，请检查核心版本"
+  fi
+  echo "$out"
 }

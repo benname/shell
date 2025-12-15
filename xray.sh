@@ -360,22 +360,53 @@ build_vless_enc_link() {
     "$uuid" "$host" "$port" "$enc" "$sni" "$pbk" "$sid" "$tag"
 }
 
-gen_enc_pair() {
-  local bin="${XRAY_BIN:-/usr/local/bin/xray-core}"
-  if [[ ! -x "$bin" ]]; then
-    bin="$(command -v xray || true)"
+parse_x25519_output() {
+  local out="$1"
+  local priv pub
+  priv="$(echo "$out" | sed -n 's/^[Pp]rivate[[:space:]]*[Kk]ey[:[:space:]]*//p' | head -n1)"
+  pub="$(echo "$out" | sed -n 's/^[Pp]ublic[[:space:]]*[Kk]ey[:[:space:]]*//p' | head -n1)"
+  if [[ -z "$priv" || -z "$pub" ]]; then
+    # 尝试抓取前两个看起来像 base64url 的字段
+    priv="$(echo "$out" | grep -Eo '[A-Za-z0-9_-]{43,}' | head -n1 || true)"
+    pub="$(echo "$out" | grep -Eo '[A-Za-z0-9_-]{43,}' | head -n2 | tail -n1 || true)"
   fi
-  if [[ -z "$bin" ]]; then
-    fatal "未找到 xray，可先运行 install"
+  if [[ -z "$priv" || -z "$pub" ]]; then
+    log_error "无法解析 x25519 输出:\n$out"
+    fatal "生成 Reality 公私钥失败，请检查 xray-core"
+  fi
+  echo "${priv}|${pub}"
+}
+
+gen_enc_pair() {
+  local bin="${XRAY_BIN:-}"
+  local runner=""
+  local candidates=(
+    "$bin"
+    "/usr/local/bin/xray-core"
+    "/usr/local/bin/xray"
+    "$(command -v xray-core 2>/dev/null || true)"
+    "$(command -v xray 2>/dev/null || true)"
+  )
+  for cand in "${candidates[@]}"; do
+    [[ -n "$cand" ]] || continue
+    [[ -x "$cand" ]] || continue
+    if "$cand" -version >/dev/null 2>/dev/null; then
+      runner="$cand"
+      break
+    fi
+  done
+  if [[ -z "$runner" ]]; then
+    fatal "未找到 xray-core，可先运行 install"
   fi
   local out
-  if ! out="$("$bin" vlessenc 2>/dev/null)"; then
-    fatal "运行 $bin vlessenc 失败，请确认核心版本支持 VLESS Encryption"
+  if ! out="$("$runner" vlessenc 2>/dev/null)"; then
+    fatal "运行 $runner vlessenc 失败，请确认核心版本支持 VLESS Encryption"
   fi
   local dec enc
   dec="$(echo "$out" | awk -F'\"' '/\"decryption\"/ {d[++i]=$4} END {print d[i]}')"
   enc="$(echo "$out" | awk -F'\"' '/\"encryption\"/ {e[++j]=$4} END {print e[j]}')"
   if [[ -z "$dec" || -z "$enc" ]]; then
+    log_error "vlessenc 输出:\n$out"
     fatal "解析 vlessenc 输出失败，请升级 xray-core"
   fi
   echo "${dec}|${enc}"
@@ -454,10 +485,11 @@ cmd_add() {
       if [[ -z "$priv_key" || -z "$pub_key" ]]; then
         local kp
         kp="$(gen_x25519_keypair)"
-        priv_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /private key/ {print $NF; exit}')"
-        pub_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /public key/ {print $NF; exit}')"
+        local parsed
+        parsed="$(parse_x25519_output "$kp")"
+        priv_key="${parsed%%|*}"
+        pub_key="${parsed##*|}"
       fi
-      [[ -n "$pub_key" ]] || fatal "生成 Reality 公钥失败"
       tpl="${TEMPLATE_DIR}/vless-reality-vision.json.tpl"
       export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
       ;;
@@ -469,10 +501,11 @@ cmd_add() {
       if [[ -z "$priv_key" || -z "$pub_key" ]]; then
         local kp
         kp="$(gen_x25519_keypair)"
-        priv_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /private key/ {print $NF; exit}')"
-        pub_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /public key/ {print $NF; exit}')"
+        local parsed
+        parsed="$(parse_x25519_output "$kp")"
+        priv_key="${parsed%%|*}"
+        pub_key="${parsed##*|}"
       fi
-      [[ -n "$pub_key" ]] || fatal "生成 Reality 公钥失败"
       if [[ -z "$enc_decryption" || -z "$enc_encryption" ]]; then
         local enc_pair
         enc_pair="$(gen_enc_pair)"
