@@ -477,6 +477,10 @@ cmd_add() {
   [[ -n "$port" ]] || port="$(rand_port)"
   [[ -n "$tag" ]] || tag="${type}-${port}"
   tag="$(sanitize_tag "$tag")"
+  if [[ -z "$host" ]]; then
+    host="$(get_public_ip)"
+  fi
+  [[ -n "$host" ]] || host="$sni"
 
   if ! check_port_free "$port"; then
     fatal "端口 $port 已被占用"
@@ -783,30 +787,36 @@ EOF
         cmd_install --start
         ;;
       2)
-        local port sni dest tag
-        port="$(prompt_default "端口 (留空自动)" "")"
-        sni="$(prompt_default "SNI" "icloud.com")"
-        dest="$(prompt_default "回源目标" "${sni}:443")"
-        tag="$(prompt_default "标识 tag" "reality-vision-${port:-auto}")"
-        cmd_add --type=reality-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag"
-        ;;
-      3)
-        local port sni dest tag
-        port="$(prompt_default "端口 (留空自动)" "")"
-        sni="$(prompt_default "SNI" "icloud.com")"
-        dest="$(prompt_default "回源目标" "${sni}:443")"
-        tag="$(prompt_default "标识 tag" "enc-vision-${port:-auto}")"
-        cmd_add --type=enc-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag"
-        ;;
-      4)
-        local port sni dest path tag
-        port="$(prompt_default "端口 (留空自动)" "")"
-        sni="$(prompt_default "SNI" "icloud.com")"
-        dest="$(prompt_default "回源目标" "${sni}:443")"
-        path="$(prompt_default "XHTTP path" "/")"
-        tag="$(prompt_default "标识 tag" "reality-xhttp-${port:-auto}")"
-        cmd_add --type=reality-xhttp ${port:+--port="$port"} --sni="$sni" --dest="$dest" --path="$path" --tag="$tag"
-        ;;
+      local port sni dest tag
+      port="$(prompt_default "端口 (留空自动)" "")"
+      sni="$(prompt_default "SNI" "icloud.com")"
+      dest="$(prompt_default "回源目标" "${sni}:443")"
+      local host
+      host="$(prompt_default "分享链接中的服务器地址(默认本机出口IP)" "$(get_public_ip)")"
+      tag="$(prompt_default "标识 tag" "reality-vision-${port:-auto}")"
+      cmd_add --type=reality-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag" ${host:+--host="$host"}
+      ;;
+    3)
+      local port sni dest tag
+      port="$(prompt_default "端口 (留空自动)" "")"
+      sni="$(prompt_default "SNI" "icloud.com")"
+      dest="$(prompt_default "回源目标" "${sni}:443")"
+      local host
+      host="$(prompt_default "分享链接中的服务器地址(默认本机出口IP)" "$(get_public_ip)")"
+      tag="$(prompt_default "标识 tag" "enc-vision-${port:-auto}")"
+      cmd_add --type=enc-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag" ${host:+--host="$host"}
+      ;;
+    4)
+      local port sni dest path tag
+      port="$(prompt_default "端口 (留空自动)" "")"
+      sni="$(prompt_default "SNI" "icloud.com")"
+      dest="$(prompt_default "回源目标" "${sni}:443")"
+      path="$(prompt_default "XHTTP path" "/")"
+      local host
+      host="$(prompt_default "分享链接中的服务器地址(默认本机出口IP)" "$(get_public_ip)")"
+      tag="$(prompt_default "标识 tag" "reality-xhttp-${port:-auto}")"
+      cmd_add --type=reality-xhttp ${port:+--port="$port"} --sni="$sni" --dest="$dest" --path="$path" --tag="$tag" ${host:+--host="$host"}
+      ;;
       5)
         cmd_deploy --start --bbr --block-bt --block-cn --type=reality-vision
         ;;

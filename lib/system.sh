@@ -165,3 +165,12 @@ gen_x25519_keypair() {
   fi
   echo "$out"
 }
+
+get_public_ip() {
+  local ip=""
+  for url in https://api.ipify.org https://ifconfig.me; do
+    ip="$(curl -fsSL "$url" 2>/dev/null || true)"
+    [[ -n "$ip" ]] && break
+  done
+  printf "%s" "$ip"
+}
