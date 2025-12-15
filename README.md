@@ -16,10 +16,10 @@ chmod +x xray.sh lib/*.sh scripts/selftest.sh install.sh
 sudo ./xray.sh install --start      # 安装核心(xray-core)+systemd+管理命令 xray
 xray doctor                         # 查看环境与默认目录
 
-# 生成节点并输出分享链接
-xray add --type=reality-vision --port=443 --sni=www.cloudflare.com
-xray add --type=enc-vision --port=8443 --sni=www.cloudflare.com
-xray add --type=reality-xhttp --path=/ --sni=www.cloudflare.com
+# 生成节点并输出分享链接（默认 SNI=icloud.com，可自填）
+xray add --type=reality-vision --port=443 --sni=icloud.com
+xray add --type=enc-vision --port=8443 --sni=icloud.com
+xray add --type=reality-xhttp --path=/ --sni=icloud.com
 
 # 查看/删除
 ./xray.sh list
@@ -32,7 +32,7 @@ sudo ./xray.sh remove --tag=reality-vision-443
 - `doctor`：打印脚本版本、路径、系统信息和依赖状态。
 - `add [--type=reality-vision|enc-vision|reality-xhttp] [...]`：生成配置文件并打印 VLESS 分享链接。
   - 通用参数：`--port`、`--uuid`、`--tag`、`--host`（链接显示用）、`--file`（输出路径）。
-  - Reality/enc+Vision: `--sni`、`--dest`、`--short-id`、`--private-key/--public-key`（缺省自动生成），无需证书。
+  - Reality/enc+Vision: `--sni`、`--dest`、`--short-id`、`--private-key/--public-key`（缺省自动生成）；enc 会自动生成 VLESS Encryption 的 decryption/encryption 串。
   - Reality+XHTTP: `--path`（默认 `/`）。
 - `deploy [opts]`：一键安装+创建节点，可选 `--bbr`（启用 BBR）、`--block-bt`、`--block-cn`、`--start`、`--version=...` 以及所有 `add` 通用参数。
 - `list`：扫描 `XRAY_CONF_DIR/*.json`，显示端口/UUID/tag。
@@ -48,7 +48,7 @@ sudo ./xray.sh remove --tag=reality-vision-443
 ```
 1) 安装/更新并启动
 2) 新增 VLESS + Reality + Vision
-3) 新增 VLESS + ENC + Vision（Reality，无需证书）
+3) 新增 VLESS + ENC + Vision（VLESS Encryption + Reality，无需证书）
 4) 新增 VLESS + Reality + XHTTP
 5) 一键部署 VLESS + Reality + Vision (BBR+禁BT+禁回国)
 6) 查看配置

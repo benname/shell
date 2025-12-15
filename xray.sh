@@ -68,10 +68,10 @@ usage() {
 
 add 参数示例:
   --type=reality-vision (默认)
-  --type=enc-vision                           Reality+Vision（enc 变体，无需证书）
+  --type=enc-vision                           VLESS Encryption + Reality + Vision（自动生成 enc 串）
   --type=reality-xhttp [--path=/]             XHTTP 回落路径
   通用: --port=443 --uuid=<uuid> --tag=my-reality --host=example.com --file=/path/to/conf.json
-  reality: --sni=www.cloudflare.com --dest=www.cloudflare.com:443 --short-id=01234567 --private-key=... --public-key=...
+  reality: --sni=icloud.com --dest=icloud.com:443 --short-id=01234567 --private-key=... --public-key=...
 
 deploy 额外示例:
   --bbr                                      启用 BBR
@@ -354,6 +354,33 @@ build_vless_reality_vision_link() {
     "$uuid" "$host" "$port" "$sni" "$pbk" "$sid" "$tag"
 }
 
+build_vless_enc_link() {
+  local uuid="$1" host="$2" port="$3" sni="$4" pbk="$5" sid="$6" enc="$7" tag="$8"
+  printf "vless://%s@%s:%s?encryption=%s&flow=xtls-rprx-vision&security=reality&sni=%s&fp=chrome&pbk=%s&sid=%s&type=tcp&headerType=none#%s\n" \
+    "$uuid" "$host" "$port" "$enc" "$sni" "$pbk" "$sid" "$tag"
+}
+
+gen_enc_pair() {
+  local bin="${XRAY_BIN:-/usr/local/bin/xray-core}"
+  if [[ ! -x "$bin" ]]; then
+    bin="$(command -v xray || true)"
+  fi
+  if [[ -z "$bin" ]]; then
+    fatal "未找到 xray，可先运行 install"
+  fi
+  local out
+  if ! out="$("$bin" vlessenc 2>/dev/null)"; then
+    fatal "运行 $bin vlessenc 失败，请确认核心版本支持 VLESS Encryption"
+  fi
+  local dec enc
+  dec="$(echo "$out" | awk -F'\"' '/\"decryption\"/ {d[++i]=$4} END {print d[i]}')"
+  enc="$(echo "$out" | awk -F'\"' '/\"encryption\"/ {e[++j]=$4} END {print e[j]}')"
+  if [[ -z "$dec" || -z "$enc" ]]; then
+    fatal "解析 vlessenc 输出失败，请升级 xray-core"
+  fi
+  echo "${dec}|${enc}"
+}
+
 cmd_add() {
   ensure_root
   load_user_config
@@ -370,6 +397,8 @@ cmd_add() {
   local outfile=""
   local host=""
   local http_path=""
+  local enc_decryption=""
+  local enc_encryption=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -385,6 +414,8 @@ cmd_add() {
       --file=*) outfile="${1#*=}" ;;
       --host=*) host="${1#*=}" ;;
       --path=*) http_path="${1#*=}" ;;
+      --enc-decryption=*) enc_decryption="${1#*=}" ;;
+      --enc-encryption=*) enc_encryption="${1#*=}" ;;
       *)
         fatal "未知参数: $1"
         ;;
@@ -416,38 +447,44 @@ cmd_add() {
   local tpl=""
   case "$type" in
     reality-vision)
-      [[ -n "$sni" ]] || sni="www.cloudflare.com"
-      [[ -n "$dest" ]] || dest="www.cloudflare.com:443"
+      [[ -n "$sni" ]] || sni="icloud.com"
+      [[ -n "$dest" ]] || dest="icloud.com:443"
       [[ -n "$short_id" ]] || short_id="$(gen_short_id 8)"
       [[ -n "$host" ]] || host="$sni"
       if [[ -z "$priv_key" || -z "$pub_key" ]]; then
         local kp
         kp="$(gen_x25519_keypair)"
-        priv_key="$(echo "$kp" | awk '/Private key/ {print $3}')"
-        pub_key="$(echo "$kp" | awk '/Public key/ {print $3}')"
+        priv_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /private key/ {print $NF; exit}')"
+        pub_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /public key/ {print $NF; exit}')"
       fi
       [[ -n "$pub_key" ]] || fatal "生成 Reality 公钥失败"
       tpl="${TEMPLATE_DIR}/vless-reality-vision.json.tpl"
       export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
       ;;
     enc-vision)
-      [[ -n "$sni" ]] || sni="www.cloudflare.com"
-      [[ -n "$dest" ]] || dest="www.cloudflare.com:443"
+      [[ -n "$sni" ]] || sni="icloud.com"
+      [[ -n "$dest" ]] || dest="icloud.com:443"
       [[ -n "$short_id" ]] || short_id="$(gen_short_id 8)"
       [[ -n "$host" ]] || host="$sni"
       if [[ -z "$priv_key" || -z "$pub_key" ]]; then
         local kp
         kp="$(gen_x25519_keypair)"
-        priv_key="$(echo "$kp" | awk '/Private key/ {print $3}')"
-        pub_key="$(echo "$kp" | awk '/Public key/ {print $3}')"
+        priv_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /private key/ {print $NF; exit}')"
+        pub_key="$(echo "$kp" | awk -F'[[:space:]:]+' 'tolower($0) ~ /public key/ {print $NF; exit}')"
       fi
       [[ -n "$pub_key" ]] || fatal "生成 Reality 公钥失败"
+      if [[ -z "$enc_decryption" || -z "$enc_encryption" ]]; then
+        local enc_pair
+        enc_pair="$(gen_enc_pair)"
+        enc_decryption="${enc_pair%%|*}"
+        enc_encryption="${enc_pair##*|}"
+      fi
       tpl="${TEMPLATE_DIR}/vless-enc-vision.json.tpl"
-      export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag"
+      export PORT="$port" UUID="$uuid" SERVER_NAME="$sni" DEST="$dest" REALITY_PRIVATE_KEY="$priv_key" REALITY_SHORT_ID="$short_id" TAG="$tag" ENC_DECRYPTION="$enc_decryption" ENC_ENCRYPTION="$enc_encryption"
       ;;
     reality-xhttp)
-      [[ -n "$sni" ]] || sni="www.cloudflare.com"
-      [[ -n "$dest" ]] || dest="www.cloudflare.com:443"
+      [[ -n "$sni" ]] || sni="icloud.com"
+      [[ -n "$dest" ]] || dest="icloud.com:443"
       [[ -n "$short_id" ]] || short_id="$(gen_short_id 8)"
       [[ -n "$host" ]] || host="$sni"
       [[ -n "$http_path" ]] || http_path="/"
@@ -476,7 +513,7 @@ cmd_add() {
       build_vless_reality_vision_link "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$tag"
       ;;
     enc-vision)
-      build_vless_reality_vision_link "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$tag"
+      build_vless_enc_link "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$enc_encryption" "$tag"
       ;;
     reality-xhttp)
       printf "vless://%s@%s:%s?encryption=none&security=reality&sni=%s&fp=chrome&pbk=%s&sid=%s&type=tcp&headerType=http&path=%s#%s\n" \
@@ -690,25 +727,23 @@ EOF
     2)
       local port sni dest tag
       port="$(prompt_default "端口 (留空自动)" "")"
-      sni="$(prompt_default "SNI" "www.cloudflare.com")"
+      sni="$(prompt_default "SNI" "icloud.com")"
       dest="$(prompt_default "回源目标" "${sni}:443")"
       tag="$(prompt_default "标识 tag" "reality-vision-${port:-auto}")"
       cmd_add --type=reality-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag"
       ;;
     3)
-      local port sni cert key alpn tag
-      port="$(prompt_default "端口" "443")"
-      sni="$(prompt_default "SNI" "www.example.com")"
-      cert="$(prompt_default "证书路径" "/etc/ssl/certs/fullchain.pem")"
-      key="$(prompt_default "私钥路径" "/etc/ssl/private/key.pem")"
-      alpn="$(prompt_default "ALPN" "\"h2\",\"http/1.1\"")"
-      tag="$(prompt_default "标识 tag" "enc-vision-${port}")"
-      cmd_add --type=enc-vision --port="$port" --sni="$sni" --cert="$cert" --key="$key" --alpn="$alpn" --tag="$tag"
+      local port sni dest tag
+      port="$(prompt_default "端口 (留空自动)" "")"
+      sni="$(prompt_default "SNI" "icloud.com")"
+      dest="$(prompt_default "回源目标" "${sni}:443")"
+      tag="$(prompt_default "标识 tag" "enc-vision-${port:-auto}")"
+      cmd_add --type=enc-vision ${port:+--port="$port"} --sni="$sni" --dest="$dest" --tag="$tag"
       ;;
     4)
       local port sni dest path tag
       port="$(prompt_default "端口 (留空自动)" "")"
-      sni="$(prompt_default "SNI" "www.cloudflare.com")"
+      sni="$(prompt_default "SNI" "icloud.com")"
       dest="$(prompt_default "回源目标" "${sni}:443")"
       path="$(prompt_default "XHTTP path" "/")"
       tag="$(prompt_default "标识 tag" "reality-xhttp-${port:-auto}")"

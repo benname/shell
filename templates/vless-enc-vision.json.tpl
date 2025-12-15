@@ -12,7 +12,8 @@
             "flow": "xtls-rprx-vision"
           }
         ],
-        "decryption": "none",
+        "decryption": "${ENC_DECRYPTION}",
+        "encryption": "${ENC_ENCRYPTION}",
         "fallbacks": []
       },
       "streamSettings": {
