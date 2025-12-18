@@ -13,8 +13,7 @@
           }
         ],
         "decryption": "${ENC_DECRYPTION}",
-        "encryption": "${ENC_ENCRYPTION}",
-        "fallbacks": []
+        "encryption": "${ENC_ENCRYPTION}"
       },
       "streamSettings": {
         "network": "tcp",

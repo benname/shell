@@ -565,7 +565,7 @@ cmd_add() {
       build_vless_enc_link "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$enc_encryption" "$tag"
       ;;
     reality-xhttp)
-      printf "vless://%s@%s:%s?encryption=none&security=reality&sni=%s&fp=chrome&pbk=%s&sid=%s&type=tcp&headerType=http&path=%s#%s\n" \
+      printf "vless://%s@%s:%s?encryption=none&security=reality&sni=%s&fp=chrome&pbk=%s&sid=%s&type=xhttp&path=%s#%s\n" \
         "$uuid" "$host" "$port" "$sni" "$pub_key" "$short_id" "$http_path" "$tag"
       ;;
   esac

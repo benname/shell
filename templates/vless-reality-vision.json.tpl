@@ -12,8 +12,7 @@
             "flow": "xtls-rprx-vision"
           }
         ],
-        "decryption": "none",
-        "fallbacks": []
+        "decryption": "none"
       },
       "streamSettings": {
         "network": "tcp",

@@ -11,11 +11,10 @@
             "id": "${UUID}"
           }
         ],
-        "decryption": "none",
-        "fallbacks": []
+        "decryption": "none"
       },
       "streamSettings": {
-        "network": "tcp",
+        "network": "xhttp",
         "security": "reality",
         "realitySettings": {
           "show": false,
@@ -30,24 +29,8 @@
           ],
           "spiderX": "/"
         },
-        "tcpSettings": {
-          "header": {
-            "type": "http",
-            "request": {
-              "path": [ "${HTTP_PATH}" ]
-            },
-            "response": {
-              "version": "1.1",
-              "status": "200",
-              "reason": "OK",
-              "headers": {
-                "Content-Type": [ "application/octet-stream", "video/mpeg" ],
-                "Transfer-Encoding": [ "chunked" ],
-                "Connection": [ "keep-alive" ],
-                "Pragma": "no-cache"
-              }
-            }
-          }
+        "xhttpSettings": {
+          "path": "${HTTP_PATH}"
         }
       }
     }
